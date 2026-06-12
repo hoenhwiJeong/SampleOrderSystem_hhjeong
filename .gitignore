@@ -1,0 +1,16 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.aps
+
+# Build output
+x64/
+Debug/
+Release/
+SampleOrderSystem/x64/
+SampleOrderSystem/Debug/
+SampleOrderSystem/Release/
+
+# PDF, etc.
+*.pdf

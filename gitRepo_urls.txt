@@ -1,0 +1,2 @@
+repo = SampleOrderSystem_hhjeong	
+urls = https://github.com/hoenhwiJeong/SampleOrderSystem_hhjeong
