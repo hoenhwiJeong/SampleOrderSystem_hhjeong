@@ -17,6 +17,12 @@ struct Order {
     int         quantity;
     OrderStatus status;
 
+    // PRODUCING 상태일 때만 유효한 생산 정보 (영속화용)
+    int    prodShortage  = 0;
+    int    prodActual    = 0;
+    double prodTotalTime = 0.0;
+    double prodYieldRate = 0.0;
+
     static Order           fromJson(const nlohmann::json& j);
     nlohmann::json         toJson() const;
     static std::string     statusToString(OrderStatus s);

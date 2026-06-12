@@ -56,6 +56,25 @@ int main() {
     // ── 서비스 ────────────────────────────────────────────
     ProductionLineService productionSvc;
 
+    // PRODUCING 주문 → 생산라인 큐 복원 (앱 재시작 시 인메모리 큐 복구)
+    {
+        auto producing = orderRepo.findByStatus(OrderStatus::PRODUCING);
+        for (const auto& o : producing) {
+            auto sOpt = sampleRepo.findById(o.sampleId);
+            ProductionTask task;
+            task.orderId          = o.id;
+            task.sampleId         = o.sampleId;
+            task.sampleName       = sOpt ? sOpt->name : o.sampleId;
+            task.orderQuantity    = o.quantity;
+            task.shortage         = o.prodShortage;
+            task.actualProduction = o.prodActual;
+            task.totalTime        = o.prodTotalTime;
+            task.yieldRate        = o.prodYieldRate;
+            task.startTime        = time(nullptr); // 재시작 시 처음부터 카운트
+            productionSvc.enqueue(task);
+        }
+    }
+
     // ── 뷰 ───────────────────────────────────────────────
     MainView          mainView;
     SampleView        sampleView;

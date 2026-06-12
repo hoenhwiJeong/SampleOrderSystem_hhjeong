@@ -89,7 +89,15 @@ void OrderController::processApproval() {
 
         Sample sample = *sOpt;
 
-        int shortage    = order.quantity - sample.stock;
+        // 예약 방식: 이미 PRODUCING 대기 중인 주문의 선점 재고를 가용 재고에서 제외
+        int reservedStock = 0;
+        for (const auto& po : orderRepo_.findByStatus(OrderStatus::PRODUCING)) {
+            if (po.sampleId == sample.id)
+                reservedStock += (po.quantity - po.prodShortage);
+        }
+        int availableStock = std::max(0, sample.stock - reservedStock);
+
+        int shortage    = order.quantity - availableStock;
         int actualProd  = 0;
         double totalTime = 0.0;
 
@@ -110,8 +118,12 @@ void OrderController::processApproval() {
                 sampleRepo_.update(sample);
                 order.status = OrderStatus::CONFIRMED;
             } else {
-                // 재고 부족 → PRODUCING, 생산라인 투입
-                order.status = OrderStatus::PRODUCING;
+                // 재고 부족 → PRODUCING, 생산라인 투입 (재고 차감 없음 — 예약 방식)
+                order.prodShortage  = shortage;
+                order.prodActual    = actualProd;
+                order.prodTotalTime = totalTime;
+                order.prodYieldRate = sample.yieldRate;
+                order.status        = OrderStatus::PRODUCING;
                 ProductionTask task;
                 task.orderId          = order.id;
                 task.sampleId         = sample.id;
@@ -164,14 +176,18 @@ void OrderController::showMonitoring() {
                 std::vector<StockInfo> stocks;
                 for (const auto& s : samples) {
                     int confirmedTotal = 0;
+                    int reservedStock  = 0;
                     for (const auto& o : orders) {
-                        if (o.sampleId == s.id && o.status == OrderStatus::CONFIRMED)
+                        if (o.sampleId != s.id) continue;
+                        if (o.status == OrderStatus::CONFIRMED)
                             confirmedTotal += o.quantity;
+                        if (o.status == OrderStatus::PRODUCING)
+                            reservedStock += (o.quantity - o.prodShortage);
                     }
                     std::string st = (s.stock == 0)             ? "고갈"
                                    : (s.stock < confirmedTotal) ? "부족"
                                    :                              "여유";
-                    stocks.push_back({s, st, confirmedTotal});
+                    stocks.push_back({s, st, confirmedTotal, reservedStock});
                 }
                 monitorView_.showOrderStats(orders, stocks);
                 break;
@@ -183,14 +199,18 @@ void OrderController::showMonitoring() {
                 std::vector<StockInfo> stocks;
                 for (const auto& s : samples) {
                     int confirmedTotal = 0;
+                    int reservedStock  = 0;
                     for (const auto& o : orders) {
-                        if (o.sampleId == s.id && o.status == OrderStatus::CONFIRMED)
+                        if (o.sampleId != s.id) continue;
+                        if (o.status == OrderStatus::CONFIRMED)
                             confirmedTotal += o.quantity;
+                        if (o.status == OrderStatus::PRODUCING)
+                            reservedStock += (o.quantity - o.prodShortage);
                     }
                     std::string st = (s.stock == 0)             ? "고갈"
                                    : (s.stock < confirmedTotal) ? "부족"
                                    :                              "여유";
-                    stocks.push_back({s, st, confirmedTotal});
+                    stocks.push_back({s, st, confirmedTotal, reservedStock});
                 }
                 monitorView_.showStockStats(stocks);
                 break;

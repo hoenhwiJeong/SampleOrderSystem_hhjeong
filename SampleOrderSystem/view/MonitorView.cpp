@@ -54,8 +54,17 @@ static void printStockTable(const std::vector<StockInfo>& stocks) {
         int pct = s.stock * 100 / maxStock;
         std::string stockStr = std::to_string(s.stock) + " ea";
 
+        // 주문예약분이 있으면 주석 표시
+        std::string reserveNote;
+        if (info.reservedStock > 0) {
+            reserveNote = std::string(Color::ORANGE)
+                        + "(주문예약: " + std::to_string(info.reservedStock) + " ea)"
+                        + Color::RESET;
+        }
+
         std::cout << " " << padRight(s.name, 26)
                   << padRight(stockStr, 10);
+        if (!reserveNote.empty()) std::cout << reserveNote << "  ";
         std::cout << ConsoleUI::stockBadge(info.status) << "  ";
         std::cout << ConsoleUI::progressBar(pct) << "\n";
     }
