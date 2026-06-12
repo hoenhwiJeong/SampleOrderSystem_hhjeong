@@ -20,7 +20,7 @@ public:
     void processRelease();
     void showMonitoring();
     void showProductionLine();
-    void autoCompleteFinished(); // 완료된 생산 작업 자동 처리
+    void autoCompleteFinished();
 
 private:
     SampleRepository&      sampleRepo_;
@@ -30,5 +30,19 @@ private:
     MonitorView&           monitorView_;
     ProductionLineView&    productionLineView_;
 
-    std::string generateOrderId();
+    std::string    generateOrderId();
+
+    // 승인 처리 헬퍼
+    ProductionTask buildProductionTask(const Order& order, const Sample& sample,
+                                       int shortage, int actualProduction, double totalTime);
+    void           approveWithSufficientStock(Order& order, Sample& sample);
+    void           approveWithProduction(Order& order, const Sample& sample,
+                                         int shortage, int actualProduction, double totalTime);
+
+    // 모니터링 헬퍼
+    std::vector<StockInfo> buildStockInfoList(const std::vector<Sample>& samples,
+                                              const std::vector<Order>&  orders) const;
+
+    // 생산 완료 처리: 재고·주문 상태 갱신, 갱신된 재고 반환
+    int finalizeProductionTask(const ProductionTask& task);
 };

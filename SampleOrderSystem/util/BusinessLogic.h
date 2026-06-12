@@ -7,7 +7,10 @@
 
 namespace BusinessLogic {
 
-    // 실 생산량: ceil(부족분 / (수율 × 0.9))
+    // 공정 오차 10% 안전 마진 (불량률 보정 계수)
+    constexpr double DEFECT_RATE_MARGIN = 0.9;
+
+    // 실 생산량: ceil(부족분 / (수율 × DEFECT_RATE_MARGIN))
     int calcActualProduction(int shortage, double yieldRate);
 
     // 총 생산시간: 평균생산시간(min/ea) × 실 생산량

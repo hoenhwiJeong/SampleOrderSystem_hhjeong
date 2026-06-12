@@ -3,7 +3,7 @@
 namespace BusinessLogic {
 
 int calcActualProduction(int shortage, double yieldRate) {
-    return static_cast<int>(std::ceil(shortage / (yieldRate * 0.9)));
+    return static_cast<int>(std::ceil(shortage / (yieldRate * DEFECT_RATE_MARGIN)));
 }
 
 double calcTotalTime(double avgProductionTime, int actualProduction) {

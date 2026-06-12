@@ -34,10 +34,10 @@ static std::string nowString() {
 }
 
 static void printStockTable(const std::vector<StockInfo>& stocks) {
-    // 잔여율: 전체 최대 재고 대비 현재 재고 비율
+    // 잔여율: 전체 최대 재고 대비 현재 재고 비율 (상대적 막대 표현)
     int maxStock = 0;
-    for (const auto& info : stocks)
-        maxStock = std::max(maxStock, info.sample.stock);
+    for (const auto& stockInfo : stocks)
+        maxStock = std::max(maxStock, stockInfo.sample.stock);
     if (maxStock == 0) maxStock = 1;
 
     std::cout << "\n " << Color::BOLD << "재고 현황\n\n" << Color::RESET;
@@ -49,24 +49,23 @@ static void printStockTable(const std::vector<StockInfo>& stocks) {
               << Color::RESET << "\n";
     ConsoleUI::printThinLine();
 
-    for (const auto& info : stocks) {
-        const auto& s = info.sample;
-        int pct = s.stock * 100 / maxStock;
-        std::string stockStr = std::to_string(s.stock) + " ea";
+    for (const auto& stockInfo : stocks) {
+        const auto& sample       = stockInfo.sample;
+        int         stockPercent = sample.stock * 100 / maxStock;
+        std::string stockStr     = std::to_string(sample.stock) + " ea";
 
-        // 주문예약분이 있으면 주석 표시
         std::string reserveNote;
-        if (info.reservedStock > 0) {
+        if (stockInfo.reservedStock > 0) {
             reserveNote = std::string(Color::ORANGE)
-                        + "(주문예약: " + std::to_string(info.reservedStock) + " ea)"
+                        + "(주문예약: " + std::to_string(stockInfo.reservedStock) + " ea)"
                         + Color::RESET;
         }
 
-        std::cout << " " << padRight(s.name, 26)
+        std::cout << " " << padRight(sample.name, 26)
                   << padRight(stockStr, 10);
         if (!reserveNote.empty()) std::cout << reserveNote << "  ";
-        std::cout << ConsoleUI::stockBadge(info.status) << "  ";
-        std::cout << ConsoleUI::progressBar(pct) << "\n";
+        std::cout << ConsoleUI::stockBadge(stockInfo.status) << "  ";
+        std::cout << ConsoleUI::progressBar(stockPercent) << "\n";
     }
 }
 
@@ -77,21 +76,21 @@ int MonitorView::showSubMenu() {
     ConsoleUI::printThinLine();
     std::cout << " [1] 주문량 확인    [2] 재고량 확인    [0] 뒤로\n";
     ConsoleUI::prompt("선택");
-    int c = -1;
-    std::cin >> c;
+    int menuChoice = -1;
+    std::cin >> menuChoice;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    return c;
+    return menuChoice;
 }
 
 void MonitorView::showOrderStats(const std::vector<Order>& orders,
                                  const std::vector<StockInfo>& stocks) {
-    int reserved = 0, producing = 0, confirmed = 0, released = 0;
-    for (const auto& o : orders) {
-        switch (o.status) {
-            case OrderStatus::RESERVED:  ++reserved;  break;
-            case OrderStatus::PRODUCING: ++producing; break;
-            case OrderStatus::CONFIRMED: ++confirmed; break;
-            case OrderStatus::RELEASED:  ++released;  break;
+    int reservedCount = 0, producingCount = 0, confirmedCount = 0, releasedCount = 0;
+    for (const auto& order : orders) {
+        switch (order.status) {
+            case OrderStatus::RESERVED:  ++reservedCount;  break;
+            case OrderStatus::PRODUCING: ++producingCount; break;
+            case OrderStatus::CONFIRMED: ++confirmedCount; break;
+            case OrderStatus::RELEASED:  ++releasedCount;  break;
             default: break;
         }
     }
@@ -106,12 +105,11 @@ void MonitorView::showOrderStats(const std::vector<Order>& orders,
             std::cout << "   " << Color::GRAY << note << Color::RESET;
         std::cout << "\n";
     };
-    printRow("RESERVED",  reserved);
-    printRow("CONFIRMED", confirmed);
-    printRow("PRODUCING", producing, "\xe2\x86\x90 생산라인 대기"); // ←
-    printRow("RELEASED",  released);
+    printRow("RESERVED",  reservedCount);
+    printRow("CONFIRMED", confirmedCount);
+    printRow("PRODUCING", producingCount, "\xe2\x86\x90 생산라인 대기"); // ←
+    printRow("RELEASED",  releasedCount);
 
-    // 재고 현황도 함께 표시
     ConsoleUI::printThinLine();
     printStockTable(stocks);
     ConsoleUI::printThinLine();

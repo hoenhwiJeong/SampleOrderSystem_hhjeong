@@ -17,7 +17,7 @@ OrderController::OrderController(SampleRepository&      sampleRepo,
       monitorView_(monitorView),
       productionLineView_(productionLineView) {}
 
-// ── 비공개 유틸 ────────────────────────────────────────────────────────────
+// ── private helpers ────────────────────────────────────────────────────────
 
 std::string OrderController::generateOrderId() {
     time_t now = time(nullptr);
@@ -33,30 +33,107 @@ std::string OrderController::generateOrderId() {
     return oss.str();
 }
 
-// ── 공개 액션 ──────────────────────────────────────────────────────────────
+ProductionTask OrderController::buildProductionTask(
+    const Order& order, const Sample& sample,
+    int shortage, int actualProduction, double totalTime) {
+    ProductionTask task;
+    task.orderId          = order.id;
+    task.sampleId         = sample.id;
+    task.sampleName       = sample.name;
+    task.orderQuantity    = order.quantity;
+    task.shortage         = shortage;
+    task.actualProduction = actualProduction;
+    task.totalTime        = totalTime;
+    task.yieldRate        = sample.yieldRate;
+    return task;
+}
+
+void OrderController::approveWithSufficientStock(Order& order, Sample& sample) {
+    sample.stock -= order.quantity;
+    sampleRepo_.update(sample);
+    order.status = OrderStatus::CONFIRMED;
+}
+
+void OrderController::approveWithProduction(Order& order, const Sample& sample,
+                                            int shortage, int actualProduction,
+                                            double totalTime) {
+    order.prodShortage  = shortage;
+    order.prodActual    = actualProduction;
+    order.prodTotalTime = totalTime;
+    order.prodYieldRate = sample.yieldRate;
+    order.status        = OrderStatus::PRODUCING;
+    // 재고 차감 없음 — PRODUCING 예약 방식
+    productionSvc_.enqueue(
+        buildProductionTask(order, sample, shortage, actualProduction, totalTime));
+}
+
+std::vector<StockInfo> OrderController::buildStockInfoList(
+    const std::vector<Sample>& samples,
+    const std::vector<Order>&  orders) const {
+
+    std::vector<StockInfo> stockList;
+    for (const auto& sample : samples) {
+        int confirmedTotal = 0;
+        int reservedStock  = 0;
+        for (const auto& order : orders) {
+            if (order.sampleId != sample.id) continue;
+            if (order.status == OrderStatus::CONFIRMED)
+                confirmedTotal += order.quantity;
+            if (order.status == OrderStatus::PRODUCING)
+                reservedStock += (order.quantity - order.prodShortage);
+        }
+        std::string stockStatus = (sample.stock == 0)             ? "고갈"
+                                : (sample.stock < confirmedTotal) ? "부족"
+                                :                                   "여유";
+        stockList.push_back({sample, stockStatus, confirmedTotal, reservedStock});
+    }
+    return stockList;
+}
+
+int OrderController::finalizeProductionTask(const ProductionTask& task) {
+    auto sampleOpt = sampleRepo_.findById(task.sampleId);
+    int  newStock  = 0;
+    if (sampleOpt) {
+        Sample sample = *sampleOpt;
+        newStock      = BusinessLogic::calcStockAfterProduction(
+                            sample.stock, task.actualProduction, task.orderQuantity);
+        sample.stock  = newStock;
+        sampleRepo_.update(sample);
+    }
+    auto orderOpt = orderRepo_.findById(task.orderId);
+    if (orderOpt) {
+        Order order  = *orderOpt;
+        order.status = OrderStatus::CONFIRMED;
+        orderRepo_.update(order);
+    }
+    return newStock;
+}
+
+// ── public actions ─────────────────────────────────────────────────────────
 
 void OrderController::placeOrder() {
-    OrderInput in = orderView_.readOrderInput();
-    if (in.sampleId.empty() || in.customerName.empty() || in.quantity <= 0) return;
+    OrderInput orderInput = orderView_.readOrderInput();
+    if (orderInput.sampleId.empty() || orderInput.customerName.empty()
+        || orderInput.quantity <= 0) return;
 
-    auto sampleOpt = sampleRepo_.findById(in.sampleId);
+    auto sampleOpt = sampleRepo_.findById(orderInput.sampleId);
     if (!sampleOpt) {
-        orderView_.showSampleNotFound(in.sampleId);
+        orderView_.showSampleNotFound(orderInput.sampleId);
         return;
     }
 
-    if (!orderView_.confirmOrderInput(in, *sampleOpt)) return;
+    if (!orderView_.confirmOrderInput(orderInput, *sampleOpt)) return;
 
-    Order o;
-    o.id           = generateOrderId();
-    o.sampleId     = in.sampleId;
-    o.customerName = in.customerName;
-    o.quantity     = in.quantity;
-    o.status       = OrderStatus::RESERVED;
+    Order order;
+    order.id           = generateOrderId();
+    order.sampleId     = orderInput.sampleId;
+    order.customerName = orderInput.customerName;
+    order.quantity     = orderInput.quantity;
+    order.status       = OrderStatus::RESERVED;
 
     try {
-        orderRepo_.add(o);
-        orderView_.showOrderPlaced(o);
+        orderRepo_.add(order);
+        orderView_.showOrderPlaced(order);
     } catch (const std::exception& e) {
         orderView_.showNoOrders(e.what());
     }
@@ -70,62 +147,35 @@ void OrderController::processApproval() {
             return;
         }
 
-        auto allSamples = sampleRepo_.findAll();
-        int sel = orderView_.showReservedList(reserved, allSamples);
-        if (sel == 0) return;
-        if (sel < 1 || sel > static_cast<int>(reserved.size())) continue;
+        auto allSamples    = sampleRepo_.findAll();
+        int  selectedIndex = orderView_.showReservedList(reserved, allSamples);
+        if (selectedIndex == 0) return;
+        if (selectedIndex < 1 || selectedIndex > (int)reserved.size()) continue;
 
-        Order order = reserved[sel - 1];
-        auto  sOpt  = sampleRepo_.findById(order.sampleId);
-        if (!sOpt) continue;
+        Order  order     = reserved[selectedIndex - 1];
+        auto   sampleOpt = sampleRepo_.findById(order.sampleId);
+        if (!sampleOpt) continue;
+        Sample sample    = *sampleOpt;
 
-        Sample sample = *sOpt;
-
-        // 예약 방식: PRODUCING 주문의 선점 재고를 제외한 가용 재고 기준으로 부족분 계산
-        auto producingOrders = orderRepo_.findByStatus(OrderStatus::PRODUCING);
-        int reservedStock    = BusinessLogic::calcReservedStock(producingOrders, sample.id);
-        int availableStock   = BusinessLogic::calcAvailableStock(sample.stock, reservedStock);
-
-        int shortage    = order.quantity - availableStock;
-        int actualProd  = 0;
-        double totalTime = 0.0;
-
-        if (shortage > 0) {
-            actualProd = BusinessLogic::calcActualProduction(shortage, sample.yieldRate);
-            totalTime  = BusinessLogic::calcTotalTime(sample.avgProductionTime, actualProd);
-        }
+        auto   producingOrders  = orderRepo_.findByStatus(OrderStatus::PRODUCING);
+        int    reservedStock    = BusinessLogic::calcReservedStock(producingOrders, sample.id);
+        int    availableStock   = BusinessLogic::calcAvailableStock(sample.stock, reservedStock);
+        int    shortage         = order.quantity - availableStock;
+        int    actualProduction = (shortage > 0)
+                                    ? BusinessLogic::calcActualProduction(shortage, sample.yieldRate)
+                                    : 0;
+        double totalTime        = (shortage > 0)
+                                    ? BusinessLogic::calcTotalTime(sample.avgProductionTime, actualProduction)
+                                    : 0.0;
 
         char decision = orderView_.showApprovalDetail(
-            sample, order, shortage, actualProd, totalTime);
-
-        if (decision == '0') continue;  // 취소: 상태 변경 없이 목록으로
+            sample, order, shortage, actualProduction, totalTime);
+        if (decision == '0') continue;
 
         if (decision == 'Y') {
-            if (shortage <= 0) {
-                // 재고 충분 → CONFIRMED, 재고 차감
-                sample.stock -= order.quantity;
-                sampleRepo_.update(sample);
-                order.status = OrderStatus::CONFIRMED;
-            } else {
-                // 재고 부족 → PRODUCING, 생산라인 투입 (재고 차감 없음 — 예약 방식)
-                order.prodShortage  = shortage;
-                order.prodActual    = actualProd;
-                order.prodTotalTime = totalTime;
-                order.prodYieldRate = sample.yieldRate;
-                order.status        = OrderStatus::PRODUCING;
-                ProductionTask task;
-                task.orderId          = order.id;
-                task.sampleId         = sample.id;
-                task.sampleName       = sample.name;
-                task.orderQuantity    = order.quantity;
-                task.shortage         = shortage;
-                task.actualProduction = actualProd;
-                task.totalTime        = totalTime;
-                task.yieldRate        = sample.yieldRate;
-                productionSvc_.enqueue(task);
-            }
+            if (shortage <= 0) approveWithSufficientStock(order, sample);
+            else               approveWithProduction(order, sample, shortage, actualProduction, totalTime);
         } else {
-            // 'R' — 거절
             order.status = OrderStatus::REJECTED;
         }
 
@@ -142,12 +192,12 @@ void OrderController::processRelease() {
             return;
         }
 
-        auto allSamples = sampleRepo_.findAll();
-        int sel = orderView_.showConfirmedList(confirmed, allSamples);
-        if (sel == 0) return;
-        if (sel < 1 || sel > static_cast<int>(confirmed.size())) continue;
+        auto allSamples    = sampleRepo_.findAll();
+        int  selectedIndex = orderView_.showConfirmedList(confirmed, allSamples);
+        if (selectedIndex == 0) return;
+        if (selectedIndex < 1 || selectedIndex > (int)confirmed.size()) continue;
 
-        Order order = confirmed[sel - 1];
+        Order order  = confirmed[selectedIndex - 1];
         order.status = OrderStatus::RELEASED;
         orderRepo_.update(order);
         orderView_.showReleaseResult(order);
@@ -161,47 +211,13 @@ void OrderController::showMonitoring() {
             case 1: {
                 auto orders  = orderRepo_.findAll();
                 auto samples = sampleRepo_.findAll();
-
-                std::vector<StockInfo> stocks;
-                for (const auto& s : samples) {
-                    int confirmedTotal = 0;
-                    int reservedStock  = 0;
-                    for (const auto& o : orders) {
-                        if (o.sampleId != s.id) continue;
-                        if (o.status == OrderStatus::CONFIRMED)
-                            confirmedTotal += o.quantity;
-                        if (o.status == OrderStatus::PRODUCING)
-                            reservedStock += (o.quantity - o.prodShortage);
-                    }
-                    std::string st = (s.stock == 0)             ? "고갈"
-                                   : (s.stock < confirmedTotal) ? "부족"
-                                   :                              "여유";
-                    stocks.push_back({s, st, confirmedTotal, reservedStock});
-                }
-                monitorView_.showOrderStats(orders, stocks);
+                monitorView_.showOrderStats(orders, buildStockInfoList(samples, orders));
                 break;
             }
             case 2: {
                 auto samples = sampleRepo_.findAll();
                 auto orders  = orderRepo_.findAll();
-
-                std::vector<StockInfo> stocks;
-                for (const auto& s : samples) {
-                    int confirmedTotal = 0;
-                    int reservedStock  = 0;
-                    for (const auto& o : orders) {
-                        if (o.sampleId != s.id) continue;
-                        if (o.status == OrderStatus::CONFIRMED)
-                            confirmedTotal += o.quantity;
-                        if (o.status == OrderStatus::PRODUCING)
-                            reservedStock += (o.quantity - o.prodShortage);
-                    }
-                    std::string st = (s.stock == 0)             ? "고갈"
-                                   : (s.stock < confirmedTotal) ? "부족"
-                                   :                              "여유";
-                    stocks.push_back({s, st, confirmedTotal, reservedStock});
-                }
-                monitorView_.showStockStats(stocks);
+                monitorView_.showStockStats(buildStockInfoList(samples, orders));
                 break;
             }
             case 0: return;
@@ -213,75 +229,38 @@ void OrderController::showMonitoring() {
 void OrderController::autoCompleteFinished() {
     while (productionSvc_.hasCurrentTask()) {
         const auto& task = *productionSvc_.currentTask();
-        if (task.startTime == 0) break;
-        if (task.totalTime <= 0.0) break; // 생산시간 미확정 — 자동 완료 금지
+        if (task.startTime == 0)   break;
+        if (task.totalTime <= 0.0) break;  // 생산시간 미확정 — 자동 완료 금지
 
         time_t now        = time(nullptr);
         double elapsedSec = static_cast<double>(now - task.startTime);
         double totalSec   = task.totalTime * 60.0;
-        if (elapsedSec < totalSec) break; // 아직 미완료
+        if (elapsedSec < totalSec) break;
 
-        // 재고 갱신
-        auto sOpt = sampleRepo_.findById(task.sampleId);
-        if (sOpt) {
-            Sample sample = *sOpt;
-            sample.stock  = BusinessLogic::calcStockAfterProduction(
-                                sample.stock, task.actualProduction, task.orderQuantity);
-            sampleRepo_.update(sample);
-        }
-
-        // 주문 상태 → CONFIRMED
-        auto oOpt = orderRepo_.findById(task.orderId);
-        if (oOpt) {
-            Order order  = *oOpt;
-            order.status = OrderStatus::CONFIRMED;
-            orderRepo_.update(order);
-        }
-
+        finalizeProductionTask(task);
         productionSvc_.completeCurrentTask();
     }
 }
 
 void OrderController::showProductionLine() {
     while (true) {
-        autoCompleteFinished(); // 진입할 때마다 자동 완료 확인
+        autoCompleteFinished();
 
         if (productionSvc_.isEmpty()) {
             productionLineView_.showEmpty();
             return;
         }
 
-        char c = productionLineView_.show(
+        char userInput = productionLineView_.show(
             productionSvc_.currentTask(),
             productionSvc_.waitingQueue());
 
-        if (c == 'C') {
-            if (!productionSvc_.hasCurrentTask()) continue;
+        if (userInput != 'C') return;
+        if (!productionSvc_.hasCurrentTask()) continue;
 
-            ProductionTask task = *productionSvc_.currentTask();
-
-            // 재고 갱신: 현재 재고 + 생산량 - 주문수량
-            auto sOpt = sampleRepo_.findById(task.sampleId);
-            if (!sOpt) { productionSvc_.completeCurrentTask(); continue; }
-
-            Sample sample = *sOpt;
-            int newStock  = BusinessLogic::calcStockAfterProduction(
-                                sample.stock, task.actualProduction, task.orderQuantity);
-            sample.stock  = newStock;
-            sampleRepo_.update(sample);
-
-            // 주문 상태 → CONFIRMED
-            auto oOpt = orderRepo_.findById(task.orderId);
-            if (oOpt) {
-                Order order = *oOpt;
-                order.status = OrderStatus::CONFIRMED;
-                orderRepo_.update(order);
-            }
-
-            productionSvc_.completeCurrentTask();
-            productionLineView_.showCompleteResult(task, newStock);
-        } else {
-            return;
-        }
+        ProductionTask task     = *productionSvc_.currentTask();
+        int            newStock = finalizeProductionTask(task);
+        productionSvc_.completeCurrentTask();
+        productionLineView_.showCompleteResult(task, newStock);
     }
 }
