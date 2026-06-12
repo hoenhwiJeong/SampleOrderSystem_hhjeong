@@ -1,6 +1,6 @@
 #include "OrderController.h"
+#include "../util/BusinessLogic.h"
 #include <ctime>
-#include <cmath>
 #include <sstream>
 #include <iomanip>
 
@@ -31,14 +31,6 @@ std::string OrderController::generateOrderId() {
     std::ostringstream oss;
     oss << "ORD-" << date << "-" << std::setfill('0') << std::setw(4) << seq;
     return oss.str();
-}
-
-int OrderController::calcActualProduction(int shortage, double yieldRate) {
-    return static_cast<int>(std::ceil(shortage / (yieldRate * 0.9)));
-}
-
-double OrderController::calcTotalTime(double avgTime, int actualProduction) {
-    return avgTime * actualProduction;
 }
 
 // ── 공개 액션 ──────────────────────────────────────────────────────────────
@@ -89,21 +81,18 @@ void OrderController::processApproval() {
 
         Sample sample = *sOpt;
 
-        // 예약 방식: 이미 PRODUCING 대기 중인 주문의 선점 재고를 가용 재고에서 제외
-        int reservedStock = 0;
-        for (const auto& po : orderRepo_.findByStatus(OrderStatus::PRODUCING)) {
-            if (po.sampleId == sample.id)
-                reservedStock += (po.quantity - po.prodShortage);
-        }
-        int availableStock = std::max(0, sample.stock - reservedStock);
+        // 예약 방식: PRODUCING 주문의 선점 재고를 제외한 가용 재고 기준으로 부족분 계산
+        auto producingOrders = orderRepo_.findByStatus(OrderStatus::PRODUCING);
+        int reservedStock    = BusinessLogic::calcReservedStock(producingOrders, sample.id);
+        int availableStock   = BusinessLogic::calcAvailableStock(sample.stock, reservedStock);
 
         int shortage    = order.quantity - availableStock;
         int actualProd  = 0;
         double totalTime = 0.0;
 
         if (shortage > 0) {
-            actualProd = calcActualProduction(shortage, sample.yieldRate);
-            totalTime  = calcTotalTime(sample.avgProductionTime, actualProd);
+            actualProd = BusinessLogic::calcActualProduction(shortage, sample.yieldRate);
+            totalTime  = BusinessLogic::calcTotalTime(sample.avgProductionTime, actualProd);
         }
 
         char decision = orderView_.showApprovalDetail(
@@ -236,7 +225,8 @@ void OrderController::autoCompleteFinished() {
         auto sOpt = sampleRepo_.findById(task.sampleId);
         if (sOpt) {
             Sample sample = *sOpt;
-            sample.stock  = sample.stock + task.actualProduction - task.orderQuantity;
+            sample.stock  = BusinessLogic::calcStockAfterProduction(
+                                sample.stock, task.actualProduction, task.orderQuantity);
             sampleRepo_.update(sample);
         }
 
@@ -275,8 +265,9 @@ void OrderController::showProductionLine() {
             if (!sOpt) { productionSvc_.completeCurrentTask(); continue; }
 
             Sample sample = *sOpt;
-            int newStock = sample.stock + task.actualProduction - task.orderQuantity;
-            sample.stock = newStock;
+            int newStock  = BusinessLogic::calcStockAfterProduction(
+                                sample.stock, task.actualProduction, task.orderQuantity);
+            sample.stock  = newStock;
             sampleRepo_.update(sample);
 
             // 주문 상태 → CONFIRMED

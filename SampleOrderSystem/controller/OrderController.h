@@ -31,6 +31,4 @@ private:
     ProductionLineView&    productionLineView_;
 
     std::string generateOrderId();
-    int         calcActualProduction(int shortage, double yieldRate);
-    double      calcTotalTime(double avgTime, int actualProduction);
 };
