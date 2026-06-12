@@ -20,6 +20,7 @@ public:
     void processRelease();
     void showMonitoring();
     void showProductionLine();
+    void autoCompleteFinished(); // 완료된 생산 작업 자동 처리
 
 private:
     SampleRepository&      sampleRepo_;

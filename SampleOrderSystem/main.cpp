@@ -70,6 +70,7 @@ int main() {
 
     // ── 메인 루프 ─────────────────────────────────────────
     while (true) {
+        orderCtrl.autoCompleteFinished(); // 완료된 생산 작업 자동 처리
         SystemSummary summary = buildSummary(sampleRepo, orderRepo);
         int choice = mainView.showMenu(summary);
 

@@ -201,8 +201,40 @@ void OrderController::showMonitoring() {
     }
 }
 
+void OrderController::autoCompleteFinished() {
+    while (productionSvc_.hasCurrentTask()) {
+        const auto& task = *productionSvc_.currentTask();
+        if (task.startTime == 0) break;
+
+        time_t now        = time(nullptr);
+        double elapsedSec = static_cast<double>(now - task.startTime);
+        double totalSec   = task.totalTime * 60.0;
+        if (elapsedSec < totalSec) break; // 아직 미완료
+
+        // 재고 갱신
+        auto sOpt = sampleRepo_.findById(task.sampleId);
+        if (sOpt) {
+            Sample sample = *sOpt;
+            sample.stock  = sample.stock + task.actualProduction - task.orderQuantity;
+            sampleRepo_.update(sample);
+        }
+
+        // 주문 상태 → CONFIRMED
+        auto oOpt = orderRepo_.findById(task.orderId);
+        if (oOpt) {
+            Order order  = *oOpt;
+            order.status = OrderStatus::CONFIRMED;
+            orderRepo_.update(order);
+        }
+
+        productionSvc_.completeCurrentTask();
+    }
+}
+
 void OrderController::showProductionLine() {
     while (true) {
+        autoCompleteFinished(); // 진입할 때마다 자동 완료 확인
+
         if (productionSvc_.isEmpty()) {
             productionLineView_.showEmpty();
             return;
