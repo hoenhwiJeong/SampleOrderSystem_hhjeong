@@ -67,29 +67,6 @@ void OrderController::approveWithProduction(Order& order, const Sample& sample,
         buildProductionTask(order, sample, shortage, actualProduction, totalTime));
 }
 
-std::vector<StockInfo> OrderController::buildStockInfoList(
-    const std::vector<Sample>& samples,
-    const std::vector<Order>&  orders) const {
-
-    std::vector<StockInfo> stockList;
-    for (const auto& sample : samples) {
-        int confirmedTotal = 0;
-        int reservedStock  = 0;
-        for (const auto& order : orders) {
-            if (order.sampleId != sample.id) continue;
-            if (order.status == OrderStatus::CONFIRMED)
-                confirmedTotal += order.quantity;
-            if (order.status == OrderStatus::PRODUCING)
-                reservedStock += (order.quantity - order.prodShortage);
-        }
-        std::string stockStatus = (sample.stock == 0)             ? "고갈"
-                                : (sample.stock < confirmedTotal) ? "부족"
-                                :                                   "여유";
-        stockList.push_back({sample, stockStatus, confirmedTotal, reservedStock});
-    }
-    return stockList;
-}
-
 int OrderController::finalizeProductionTask(const ProductionTask& task) {
     auto sampleOpt = sampleRepo_.findById(task.sampleId);
     int  newStock  = 0;
@@ -211,13 +188,13 @@ void OrderController::showMonitoring() {
             case 1: {
                 auto orders  = orderRepo_.findAll();
                 auto samples = sampleRepo_.findAll();
-                monitorView_.showOrderStats(orders, buildStockInfoList(samples, orders));
+                monitorView_.showOrderStats(orders, BusinessLogic::buildStockInfoList(samples, orders));
                 break;
             }
             case 2: {
                 auto samples = sampleRepo_.findAll();
                 auto orders  = orderRepo_.findAll();
-                monitorView_.showStockStats(buildStockInfoList(samples, orders));
+                monitorView_.showStockStats(BusinessLogic::buildStockInfoList(samples, orders));
                 break;
             }
             case 0: return;

@@ -13,15 +13,17 @@ struct SampleInput {
 
 class SampleView {
 public:
-    int         showSubMenu();
-    SampleInput readSampleInput();
-    bool        confirmSampleInput(const SampleInput& input);
+    virtual ~SampleView() = default;
+
+    virtual int         showSubMenu();
+    virtual SampleInput readSampleInput();
+    virtual bool        confirmSampleInput(const SampleInput& input);
     // returns 'N'=next page, '0'=back
-    char        showSampleList(const std::vector<Sample>& page,
-                               int pageNum, int totalPages, int totalCount);
-    std::string readSearchKeyword();
-    void        showSearchResult(const std::vector<Sample>& result);
-    void        showRegistered(const std::string& id);
-    void        showNotFound(const std::string& id);
-    void        showError(const std::string& msg);
+    virtual char        showSampleList(const std::vector<Sample>& page,
+                                       int pageNum, int totalPages, int totalCount);
+    virtual std::string readSearchKeyword();
+    virtual void        showSearchResult(const std::vector<Sample>& result);
+    virtual void        showRegistered(const std::string& id);
+    virtual void        showNotFound(const std::string& id);
+    virtual void        showError(const std::string& msg);
 };

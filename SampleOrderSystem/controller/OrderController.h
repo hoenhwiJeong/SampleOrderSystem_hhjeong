@@ -39,10 +39,6 @@ private:
     void           approveWithProduction(Order& order, const Sample& sample,
                                          int shortage, int actualProduction, double totalTime);
 
-    // 모니터링 헬퍼
-    std::vector<StockInfo> buildStockInfoList(const std::vector<Sample>& samples,
-                                              const std::vector<Order>&  orders) const;
-
     // 생산 완료 처리: 재고·주문 상태 갱신, 갱신된 재고 반환
     int finalizeProductionTask(const ProductionTask& task);
 };

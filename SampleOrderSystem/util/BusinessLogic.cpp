@@ -30,4 +30,25 @@ int calcStockAfterProduction(int currentStock,
     return currentStock + actualProduction - orderQuantity;
 }
 
+std::vector<StockInfo> buildStockInfoList(const std::vector<Sample>& samples,
+                                          const std::vector<Order>&  orders) {
+    std::vector<StockInfo> result;
+    for (const auto& sample : samples) {
+        int confirmedTotal = 0;
+        int reservedStock  = 0;
+        for (const auto& order : orders) {
+            if (order.sampleId != sample.id) continue;
+            if (order.status == OrderStatus::CONFIRMED)
+                confirmedTotal += order.quantity;
+            if (order.status == OrderStatus::PRODUCING)
+                reservedStock += (order.quantity - order.prodShortage);
+        }
+        std::string status = (sample.stock == 0)             ? "고갈"
+                           : (sample.stock < confirmedTotal) ? "부족"
+                           :                                   "여유";
+        result.push_back({sample, status, confirmedTotal, reservedStock});
+    }
+    return result;
+}
+
 } // namespace BusinessLogic

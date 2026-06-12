@@ -80,8 +80,12 @@
     <ClCompile Include="test_business_logic.cpp" />
     <ClCompile Include="test_production_service.cpp" />
     <ClCompile Include="test_repository.cpp" />
+    <ClCompile Include="test_sample_model.cpp" />
+    <ClCompile Include="test_repository_ext.cpp" />
+    <ClCompile Include="test_sample_controller.cpp" />
+    <ClCompile Include="test_order_controller.cpp" />
   </ItemGroup>
-  <!-- 메인 프로젝트 공유 소스 (view / main.cpp 제외) -->
+  <!-- 메인 프로젝트 공유 소스 (main.cpp 제외) -->
   <ItemGroup>
     <ClCompile Include="..\SampleOrderSystem\model\Sample.cpp" />
     <ClCompile Include="..\SampleOrderSystem\model\Order.cpp" />
@@ -90,6 +94,13 @@
     <ClCompile Include="..\SampleOrderSystem\service\ProductionLineService.cpp" />
     <ClCompile Include="..\SampleOrderSystem\util\BusinessLogic.cpp" />
     <ClCompile Include="..\SampleOrderSystem\util\JsonHelper.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\util\ConsoleUI.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\controller\SampleController.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\controller\OrderController.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\view\SampleView.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\view\OrderView.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\view\MonitorView.cpp" />
+    <ClCompile Include="..\SampleOrderSystem\view\ProductionLineView.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

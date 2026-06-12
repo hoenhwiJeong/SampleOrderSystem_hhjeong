@@ -1,5 +1,6 @@
 #pragma once
 #include "../model/Order.h"
+#include "../model/StockInfo.h"
 #include <vector>
 #include <string>
 #include <cmath>
@@ -28,5 +29,9 @@ namespace BusinessLogic {
     int calcStockAfterProduction(int currentStock,
                                  int actualProduction,
                                  int orderQuantity);
+
+    // 시료별 재고 상태 목록 (고갈/부족/여유 판단 포함)
+    std::vector<StockInfo> buildStockInfoList(const std::vector<Sample>& samples,
+                                              const std::vector<Order>&  orders);
 
 } // namespace BusinessLogic
