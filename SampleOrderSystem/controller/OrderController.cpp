@@ -120,6 +120,7 @@ void OrderController::processApproval() {
                 task.shortage         = shortage;
                 task.actualProduction = actualProd;
                 task.totalTime        = totalTime;
+                task.yieldRate        = sample.yieldRate;
                 productionSvc_.enqueue(task);
             }
         } else {
@@ -157,8 +158,22 @@ void OrderController::showMonitoring() {
         int choice = monitorView_.showSubMenu();
         switch (choice) {
             case 1: {
-                auto all = orderRepo_.findAll();
-                monitorView_.showOrderStats(all);
+                auto orders  = orderRepo_.findAll();
+                auto samples = sampleRepo_.findAll();
+
+                std::vector<StockInfo> stocks;
+                for (const auto& s : samples) {
+                    int confirmedTotal = 0;
+                    for (const auto& o : orders) {
+                        if (o.sampleId == s.id && o.status == OrderStatus::CONFIRMED)
+                            confirmedTotal += o.quantity;
+                    }
+                    std::string st = (s.stock == 0)             ? "고갈"
+                                   : (s.stock < confirmedTotal) ? "부족"
+                                   :                              "여유";
+                    stocks.push_back({s, st, confirmedTotal});
+                }
+                monitorView_.showOrderStats(orders, stocks);
                 break;
             }
             case 2: {
@@ -172,18 +187,12 @@ void OrderController::showMonitoring() {
                         if (o.sampleId == s.id && o.status == OrderStatus::CONFIRMED)
                             confirmedTotal += o.quantity;
                     }
-                    std::string st = (s.stock == 0)                    ? "고갈"
-                                   : (s.stock < confirmedTotal)        ? "부족"
-                                   :                                     "여유";
+                    std::string st = (s.stock == 0)             ? "고갈"
+                                   : (s.stock < confirmedTotal) ? "부족"
+                                   :                              "여유";
                     stocks.push_back({s, st, confirmedTotal});
                 }
                 monitorView_.showStockStats(stocks);
-                break;
-            }
-            case 3: {
-                auto producing = orderRepo_.findByStatus(OrderStatus::PRODUCING);
-                auto samples   = sampleRepo_.findAll();
-                monitorView_.showProducingQueue(producing, samples);
                 break;
             }
             case 0: return;

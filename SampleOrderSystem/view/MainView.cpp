@@ -21,8 +21,8 @@ int MainView::showMenu(const SystemSummary& s) {
     // 메뉴
     std::cout << "\n";
     std::cout << "  [1] 시료 관리          [2] 시료 주문\n";
-    std::cout << "  [3] 주문 승인/거절     [4] 출고 처리\n";
-    std::cout << "  [5] 모니터링           [6] 생산라인 관리\n";
+    std::cout << "  [3] 주문 승인/거절     [4] 모니터링\n";
+    std::cout << "  [5] 생산라인 조회      [6] 출고 처리\n";
     std::cout << "  [0] 종료\n";
     ConsoleUI::printThinLine();
 

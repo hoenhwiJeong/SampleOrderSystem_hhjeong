@@ -7,15 +7,17 @@
 static constexpr int LINE_WIDTH = 60;
 
 void ConsoleUI::printLine() {
-    std::cout << Color::GRAY
-              << std::string(LINE_WIDTH, '=')
-              << Color::RESET << "\n";
+    std::cout << Color::GRAY;
+    for (int i = 0; i < LINE_WIDTH; ++i)
+        std::cout << "\xe2\x95\x90"; // ═ (U+2550)
+    std::cout << Color::RESET << "\n";
 }
 
 void ConsoleUI::printThinLine() {
-    std::cout << Color::GRAY
-              << std::string(LINE_WIDTH, '-')
-              << Color::RESET << "\n";
+    std::cout << Color::GRAY;
+    for (int i = 0; i < LINE_WIDTH; ++i)
+        std::cout << "\xe2\x94\x80"; // ─ (U+2500)
+    std::cout << Color::RESET << "\n";
 }
 
 void ConsoleUI::printTitle() {

@@ -1,1 +1,16 @@
-[]
+[
+    {
+        "customerName": "삼성전자",
+        "id": "ORD-20260612-0001",
+        "quantity": 500,
+        "sampleId": "S-001",
+        "status": "PRODUCING"
+    },
+    {
+        "customerName": "하이닉스",
+        "id": "ORD-20260612-0002",
+        "quantity": 100,
+        "sampleId": "S-001",
+        "status": "RESERVED"
+    }
+]

@@ -11,6 +11,7 @@ struct ProductionTask {
     int         shortage;
     int         actualProduction;
     double      totalTime;          // min
+    double      yieldRate;          // 0.0 ~ 1.0
 };
 
 class ProductionLineService {

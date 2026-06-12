@@ -77,9 +77,9 @@ int main() {
             case 1: sampleCtrl.handleMenu();        break;
             case 2: orderCtrl.placeOrder();          break;
             case 3: orderCtrl.processApproval();     break;
-            case 4: orderCtrl.processRelease();      break;
-            case 5: orderCtrl.showMonitoring();      break;
-            case 6: orderCtrl.showProductionLine();  break;
+            case 4: orderCtrl.showMonitoring();      break;
+            case 5: orderCtrl.showProductionLine();  break;
+            case 6: orderCtrl.processRelease();      break;
             case 0:
                 ConsoleUI::clearScreen();
                 std::cout << "  S-Semi 시스템을 종료합니다.\n\n";

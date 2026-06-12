@@ -1,1 +1,18 @@
-[]
+[
+    {
+        "avgProductionTime": 0.5,
+        "id": "S-001",
+        "name": "실리콘 웨이퍼",
+        "stock": 100,
+        "yieldRate": 0.9
+    }
+]
+[
+    {
+        "avgProductionTime": 0.05,
+        "id": "S-002",
+        "name": "SOC",
+        "stock": 30,
+        "yieldRate": 0.5
+    }
+]

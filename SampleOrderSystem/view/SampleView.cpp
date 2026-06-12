@@ -2,17 +2,33 @@
 #include "../util/ConsoleUI.h"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <limits>
 
 static constexpr int PAGE_SIZE = 10;
 
+static int dispWidth(const std::string& s) {
+    int w = 0;
+    for (size_t i = 0; i < s.size(); ) {
+        unsigned char c = (unsigned char)s[i];
+        if      (c < 0x80) { w += 1; i += 1; }
+        else if (c < 0xE0) { w += 1; i += 2; }
+        else if (c < 0xF0) { w += 2; i += 3; }
+        else               { w += 2; i += 4; }
+    }
+    return w;
+}
+
+static std::string padRight(const std::string& s, int width) {
+    int pad = width - dispWidth(s);
+    return s + (pad > 0 ? std::string(pad, ' ') : "");
+}
+
 int SampleView::showSubMenu() {
-    ConsoleUI::printHeader("시료 관리");
-    std::cout << "  [1] 시료 등록\n";
-    std::cout << "  [2] 시료 목록\n";
-    std::cout << "  [3] 시료 검색\n";
-    std::cout << "  [0] 뒤로\n";
+    ConsoleUI::printLine();
+    std::cout << Color::BLUE << Color::BOLD << " [1] 시료 관리" << Color::RESET << "\n";
     ConsoleUI::printThinLine();
+    std::cout << " [1] 시료 등록   [2] 시료 목록   [3] 시료 검색   [0] 뒤로\n";
     ConsoleUI::prompt("선택");
     int c = -1;
     std::cin >> c;
@@ -21,23 +37,15 @@ int SampleView::showSubMenu() {
 }
 
 SampleInput SampleView::readSampleInput() {
-    ConsoleUI::printHeader("시료 등록");
+    ConsoleUI::printThinLine();
+    std::cout << "\n " << Color::BOLD << "시료 등록\n\n" << Color::RESET;
     SampleInput in{};
 
-    ConsoleUI::prompt("시료 ID (예: S-006)");
-    std::getline(std::cin, in.id);
-
-    ConsoleUI::prompt("시료명");
-    std::getline(std::cin, in.name);
-
-    ConsoleUI::prompt("평균 생산시간 (분/ea)");
-    std::cin >> in.avgProductionTime;
-
-    ConsoleUI::prompt("수율 (0.0 ~ 1.0)");
-    std::cin >> in.yieldRate;
-
-    ConsoleUI::prompt("초기 재고 (ea)");
-    std::cin >> in.stock;
+    std::cout << " 시료 ID        "; ConsoleUI::prompt(""); std::getline(std::cin, in.id);
+    std::cout << " 시료명         "; ConsoleUI::prompt(""); std::getline(std::cin, in.name);
+    std::cout << " 평균 생산시간  "; ConsoleUI::prompt(""); std::cin >> in.avgProductionTime;
+    std::cout << " 수율 (0.0-1.0) "; ConsoleUI::prompt(""); std::cin >> in.yieldRate;
+    std::cout << " 초기 재고 (ea) "; ConsoleUI::prompt(""); std::cin >> in.stock;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     return in;
@@ -45,90 +53,114 @@ SampleInput SampleView::readSampleInput() {
 
 bool SampleView::confirmSampleInput(const SampleInput& in) {
     ConsoleUI::printThinLine();
-    std::cout << "  ID       : " << in.id                  << "\n";
-    std::cout << "  시료명   : " << in.name                 << "\n";
-    std::cout << "  생산시간 : " << in.avgProductionTime    << " min/ea\n";
-    std::cout << "  수율     : " << in.yieldRate * 100.0    << " %\n";
-    std::cout << "  초기재고 : " << in.stock                << " ea\n";
-    return ConsoleUI::confirm();
+    std::cout << "\n " << Color::BOLD << "입력 내용 확인\n" << Color::RESET;
+
+    std::ostringstream timeStr, yieldStr;
+    timeStr  << std::fixed << std::setprecision(1) << in.avgProductionTime << " min/ea";
+    yieldStr << std::fixed << std::setprecision(2) << in.yieldRate;
+
+    std::cout << " " << Color::GRAY << padRight("ID", 14)           << Color::RESET << in.id           << "\n";
+    std::cout << " " << Color::GRAY << padRight("시료명", 14)        << Color::RESET << in.name         << "\n";
+    std::cout << " " << Color::GRAY << padRight("평균 생산시간", 14) << Color::RESET << timeStr.str()   << "\n";
+    std::cout << " " << Color::GRAY << padRight("수율", 14)          << Color::RESET << yieldStr.str()  << "\n";
+    std::cout << " " << Color::GRAY << padRight("초기 재고", 14)     << Color::RESET << in.stock        << " ea\n\n";
+
+    std::cout << " " << Color::GREEN << "[Y] 등록" << Color::RESET
+              << "    " << Color::GRAY << "[N] 취소" << Color::RESET << "\n";
+    ConsoleUI::prompt("선택");
+    char c;
+    std::cin >> c;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    return (c == 'Y' || c == 'y');
 }
 
 char SampleView::showSampleList(const std::vector<Sample>& page,
-                                int pageNum, int totalPages, int totalCount) {
-    ConsoleUI::printHeader("시료 목록  [" + std::to_string(pageNum) + "/"
-                           + std::to_string(totalPages) + " page]  총 "
-                           + std::to_string(totalCount) + " 종");
+                                int pageNum, int /*totalPages*/, int totalCount) {
+    ConsoleUI::printThinLine();
+    std::cout << "\n " << Color::BOLD << "등록 시료 목록  "
+              << Color::RESET << Color::GRAY << "(총 " << totalCount << "종)" << Color::RESET << "\n\n";
 
-    // 헤더
-    std::cout << "  " << std::left
-              << std::setw(8)  << "ID"
-              << std::setw(24) << "시료명"
-              << std::setw(10) << "생산시간"
-              << std::setw(8)  << "수율"
-              << std::setw(8)  << "재고"
-              << "상태\n";
+    std::cout << Color::BLUE << Color::BOLD << " "
+              << padRight("ID", 10)
+              << padRight("시료명", 24)
+              << padRight("평균 생산시간", 15)
+              << padRight("수율", 8)
+              << "현재 재고"
+              << Color::RESET << "\n";
     ConsoleUI::printThinLine();
 
     for (const auto& s : page) {
-        int maxStock = 1000;
-        int pct      = (s.stock > 0) ? (s.stock * 100 / maxStock) : 0;
-        pct = std::min(pct, 100);
-        std::string stockSt = (s.stock == 0) ? "고갈"
-                            : (s.stock < 50)  ? "부족"
-                            :                   "여유";
+        std::ostringstream timeStr, yieldStr;
+        timeStr  << std::fixed << std::setprecision(1) << s.avgProductionTime << " min/ea";
+        yieldStr << std::fixed << std::setprecision(2) << s.yieldRate;
 
-        std::cout << "  " << std::left
-                  << std::setw(8)  << s.id
-                  << std::setw(24) << s.name
-                  << std::setw(10) << (std::to_string(s.avgProductionTime) + "m")
-                  << std::setw(8)  << (std::to_string((int)(s.yieldRate * 100)) + "%")
-                  << std::setw(8)  << (std::to_string(s.stock) + "ea")
-                  << ConsoleUI::stockBadge(stockSt) << "\n";
+        std::cout << " " << Color::BLUE
+                  << padRight(s.id,   10)
+                  << padRight(s.name, 24)
+                  << Color::RESET
+                  << padRight(timeStr.str(),  15)
+                  << padRight(yieldStr.str(), 8)
+                  << s.stock << " ea\n";
     }
 
     ConsoleUI::printThinLine();
-    if (pageNum < totalPages)
-        std::cout << "  [N] 다음 페이지   [0] 뒤로\n";
-    else
-        std::cout << "  [0] 뒤로\n";
-    ConsoleUI::prompt("선택");
 
+    int startIdx  = (pageNum - 1) * PAGE_SIZE;
+    int remaining = totalCount - (startIdx + static_cast<int>(page.size()));
+    if (remaining > 0)
+        std::cout << " " << Color::GRAY << "...외 " << remaining << "종"
+                  << Color::RESET << "    [N] 다음페이지    [0] 뒤로\n";
+    else
+        std::cout << " [0] 뒤로\n";
+
+    ConsoleUI::prompt("선택");
     char c = '0';
     std::cin >> c;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    return c;
+    return static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
 }
 
 std::string SampleView::readSearchKeyword() {
-    ConsoleUI::printHeader("시료 검색");
-    ConsoleUI::prompt("검색어 (시료명)");
+    ConsoleUI::printThinLine();
+    std::cout << "\n " << Color::BOLD << "시료 검색\n\n" << Color::RESET;
+    std::cout << " 검색어 (시료명) "; ConsoleUI::prompt("");
     std::string kw;
     std::getline(std::cin, kw);
     return kw;
 }
 
 void SampleView::showSearchResult(const std::vector<Sample>& result) {
+    ConsoleUI::printThinLine();
     if (result.empty()) {
+        std::cout << "\n";
         ConsoleUI::printInfo("검색 결과가 없습니다.");
         ConsoleUI::pause();
         return;
     }
 
-    ConsoleUI::printHeader("검색 결과  " + std::to_string(result.size()) + " 종");
-    std::cout << "  " << std::left
-              << std::setw(8)  << "ID"
-              << std::setw(24) << "시료명"
-              << std::setw(10) << "생산시간"
-              << std::setw(8)  << "수율"
-              << "재고\n";
+    std::cout << "\n " << Color::BOLD << "검색 결과  "
+              << Color::RESET << Color::GRAY << result.size() << "종" << Color::RESET << "\n\n";
+
+    std::cout << Color::BLUE << Color::BOLD << " "
+              << padRight("ID", 10)
+              << padRight("시료명", 24)
+              << padRight("평균 생산시간", 15)
+              << padRight("수율", 8)
+              << "현재 재고"
+              << Color::RESET << "\n";
     ConsoleUI::printThinLine();
 
     for (const auto& s : result) {
-        std::cout << "  " << std::left
-                  << std::setw(8)  << s.id
-                  << std::setw(24) << s.name
-                  << std::setw(10) << (std::to_string(s.avgProductionTime) + "m")
-                  << std::setw(8)  << (std::to_string((int)(s.yieldRate * 100)) + "%")
+        std::ostringstream timeStr, yieldStr;
+        timeStr  << std::fixed << std::setprecision(1) << s.avgProductionTime << " min/ea";
+        yieldStr << std::fixed << std::setprecision(2) << s.yieldRate;
+
+        std::cout << " " << Color::BLUE
+                  << padRight(s.id,   10)
+                  << padRight(s.name, 24)
+                  << Color::RESET
+                  << padRight(timeStr.str(),  15)
+                  << padRight(yieldStr.str(), 8)
                   << s.stock << " ea\n";
     }
 
@@ -136,16 +168,20 @@ void SampleView::showSearchResult(const std::vector<Sample>& result) {
 }
 
 void SampleView::showRegistered(const std::string& id) {
-    ConsoleUI::printSuccess("시료 등록 완료: " + id);
+    ConsoleUI::printThinLine();
+    std::cout << "\n " << Color::GREEN << "시료 등록 완료." << Color::RESET << "\n\n";
+    std::cout << " " << Color::GRAY << "ID    " << Color::RESET << id << "\n";
     ConsoleUI::pause();
 }
 
 void SampleView::showNotFound(const std::string& id) {
+    ConsoleUI::printThinLine();
     ConsoleUI::printError("등록되지 않은 시료 ID입니다: " + id);
     ConsoleUI::pause();
 }
 
 void SampleView::showError(const std::string& msg) {
+    ConsoleUI::printThinLine();
     ConsoleUI::printError(msg);
     ConsoleUI::pause();
 }
