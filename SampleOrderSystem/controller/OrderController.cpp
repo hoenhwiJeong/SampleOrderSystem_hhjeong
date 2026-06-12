@@ -225,6 +225,7 @@ void OrderController::autoCompleteFinished() {
     while (productionSvc_.hasCurrentTask()) {
         const auto& task = *productionSvc_.currentTask();
         if (task.startTime == 0) break;
+        if (task.totalTime <= 0.0) break; // 생산시간 미확정 — 자동 완료 금지
 
         time_t now        = time(nullptr);
         double elapsedSec = static_cast<double>(now - task.startTime);

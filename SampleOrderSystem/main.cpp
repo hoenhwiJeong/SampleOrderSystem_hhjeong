@@ -59,8 +59,21 @@ int main() {
     // PRODUCING 주문 → 생산라인 큐 복원 (앱 재시작 시 인메모리 큐 복구)
     {
         auto producing = orderRepo.findByStatus(OrderStatus::PRODUCING);
-        for (const auto& o : producing) {
+        for (auto o : producing) {
             auto sOpt = sampleRepo.findById(o.sampleId);
+
+            // prod 필드가 없는 구형 데이터 → 시료 데이터로 재계산
+            if (o.prodTotalTime <= 0.0 && sOpt) {
+                int shortage    = o.quantity; // 보수적으로 전량 부족 가정
+                int actualProd  = static_cast<int>(
+                    std::ceil(shortage / (sOpt->yieldRate * 0.9)));
+                o.prodShortage  = shortage;
+                o.prodActual    = actualProd;
+                o.prodTotalTime = sOpt->avgProductionTime * actualProd;
+                o.prodYieldRate = sOpt->yieldRate;
+                orderRepo.update(o); // DB에 반영
+            }
+
             ProductionTask task;
             task.orderId          = o.id;
             task.sampleId         = o.sampleId;
