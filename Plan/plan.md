@@ -8,7 +8,7 @@
 | 2 | Model + Repository | Sample/Order 모델, SampleRepository, OrderRepository | ✅ 완료 |
 | 3 | Service + Controller | ProductionLineService, SampleController, OrderController | ✅ 완료 |
 | 4 | View + main.cpp 통합 | 전체 View 파일, main.cpp 연결 | ✅ 완료 |
-| 5 | 통합 테스트 및 검증 | 전체 플로우 테스트, 예외 처리 확인, 최종 빌드 | ⬜ 대기 |
+| 5 | 통합 테스트 및 검증 | 전체 플로우 테스트, 예외 처리 확인, 최종 빌드 | ✅ 완료 |
 
 ---
 
@@ -303,5 +303,5 @@ Phase 1  [프로젝트 기반 세팅]    ✅ 완료
 Phase 2  [Model + Repository]   ✅ 완료
 Phase 3  [Service + Controller] ✅ 완료
 Phase 4  [View + main.cpp]      ✅ 완료
-Phase 5  [통합 테스트 및 검증]   ⬜ 대기
+Phase 5  [통합 테스트 및 검증]   ✅ 완료
 ```

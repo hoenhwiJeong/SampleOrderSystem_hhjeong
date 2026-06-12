@@ -37,7 +37,7 @@ void SampleController::registerSample() {
         repo_.add(s);
         view_.showRegistered(s.id);
     } catch (const std::exception& e) {
-        view_.showNotFound(e.what());
+        view_.showError(e.what());
     }
 }
 

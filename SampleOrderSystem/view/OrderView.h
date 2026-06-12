@@ -18,8 +18,8 @@ public:
     // returns: 1-based index of selected order, 0=back
     int        showReservedList(const std::vector<Order>& orders,
                                 const std::vector<Sample>& samples);
-    // returns: true=approve, false=reject
-    bool       showApprovalDetail(const Sample& s, const Order& o,
+    // returns: 'Y'=approve, 'R'=reject, '0'=cancel
+    char       showApprovalDetail(const Sample& s, const Order& o,
                                   int shortage, int actualProd, double totalTime);
     void       showApprovalResult(const Order& o);
     // returns: 1-based index of selected order, 0=back

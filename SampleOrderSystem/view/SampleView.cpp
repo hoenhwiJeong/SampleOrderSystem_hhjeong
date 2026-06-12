@@ -144,3 +144,8 @@ void SampleView::showNotFound(const std::string& id) {
     ConsoleUI::printError("등록되지 않은 시료 ID입니다: " + id);
     ConsoleUI::pause();
 }
+
+void SampleView::showError(const std::string& msg) {
+    ConsoleUI::printError(msg);
+    ConsoleUI::pause();
+}

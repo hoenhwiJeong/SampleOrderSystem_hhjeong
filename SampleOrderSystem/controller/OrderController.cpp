@@ -98,11 +98,12 @@ void OrderController::processApproval() {
             totalTime  = calcTotalTime(sample.avgProductionTime, actualProd);
         }
 
-        bool approved = orderView_.showApprovalDetail(
+        char decision = orderView_.showApprovalDetail(
             sample, order, shortage, actualProd, totalTime);
 
-        // 승인
-        if (approved) {
+        if (decision == '0') continue;  // 취소: 상태 변경 없이 목록으로
+
+        if (decision == 'Y') {
             if (shortage <= 0) {
                 // 재고 충분 → CONFIRMED, 재고 차감
                 sample.stock -= order.quantity;
@@ -112,17 +113,17 @@ void OrderController::processApproval() {
                 // 재고 부족 → PRODUCING, 생산라인 투입
                 order.status = OrderStatus::PRODUCING;
                 ProductionTask task;
-                task.orderId         = order.id;
-                task.sampleId        = sample.id;
-                task.sampleName      = sample.name;
-                task.orderQuantity   = order.quantity;
-                task.shortage        = shortage;
+                task.orderId          = order.id;
+                task.sampleId         = sample.id;
+                task.sampleName       = sample.name;
+                task.orderQuantity    = order.quantity;
+                task.shortage         = shortage;
                 task.actualProduction = actualProd;
-                task.totalTime       = totalTime;
+                task.totalTime        = totalTime;
                 productionSvc_.enqueue(task);
             }
         } else {
-            // 거절
+            // 'R' — 거절
             order.status = OrderStatus::REJECTED;
         }
 

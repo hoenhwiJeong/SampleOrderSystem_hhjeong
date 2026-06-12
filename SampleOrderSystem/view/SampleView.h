@@ -23,4 +23,5 @@ public:
     void        showSearchResult(const std::vector<Sample>& result);
     void        showRegistered(const std::string& id);
     void        showNotFound(const std::string& id);
+    void        showError(const std::string& msg);
 };

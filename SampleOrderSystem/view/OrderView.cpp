@@ -72,7 +72,7 @@ int OrderView::showReservedList(const std::vector<Order>& orders,
     return sel;
 }
 
-bool OrderView::showApprovalDetail(const Sample& s, const Order& o,
+char OrderView::showApprovalDetail(const Sample& s, const Order& o,
                                    int shortage, int actualProd, double totalTime) {
     ConsoleUI::printHeader("승인 상세 검토");
 
@@ -103,8 +103,10 @@ bool OrderView::showApprovalDetail(const Sample& s, const Order& o,
     std::cin >> c;
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
-    if (c == '0') return false;  // 취소는 false 로 처리 (caller에서 continue)
-    return (c == 'Y' || c == 'y');
+    if (c == '0') return '0';
+    if (c == 'R' || c == 'r') return 'R';
+    if (c == 'Y' || c == 'y') return 'Y';
+    return '0';  // 그 외 입력은 취소 처리
 }
 
 void OrderView::showApprovalResult(const Order& o) {
