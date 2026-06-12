@@ -1,18 +1,72 @@
 [
     {
-        "avgProductionTime": 0.5,
+        "avgProductionTime": 0.05,
         "id": "S-001",
         "name": "실리콘 웨이퍼",
-        "stock": 100,
+        "stock": 50,
         "yieldRate": 0.9
-    }
-]
-[
+    },
     {
-        "avgProductionTime": 0.05,
+        "avgProductionTime": 0.3,
         "id": "S-002",
-        "name": "SOC",
+        "name": "GaN 에피택셜-4인치",
+        "stock": 220,
+        "yieldRate": 0.78
+    },
+    {
+        "avgProductionTime": 0.8,
+        "id": "S-003",
+        "name": "SiC 파워기판-6인치",
         "stock": 30,
-        "yieldRate": 0.5
+        "yieldRate": 0.92
+    },
+    {
+        "avgProductionTime": 0.2,
+        "id": "S-004",
+        "name": "포토레지스트-PR7",
+        "stock": 910,
+        "yieldRate": 0.95
+    },
+    {
+        "avgProductionTime": 0.6,
+        "id": "S-005",
+        "name": "산화막 웨이퍼-SiO2",
+        "stock": 0,
+        "yieldRate": 0.88
+    },
+    {
+        "avgProductionTime": 1.2,
+        "id": "S-006",
+        "name": "질화규소 박막-Si3N4",
+        "stock": 145,
+        "yieldRate": 0.85
+    },
+    {
+        "avgProductionTime": 0.45,
+        "id": "S-007",
+        "name": "AlGaAs 이중이종구조",
+        "stock": 58,
+        "yieldRate": 0.81
+    },
+    {
+        "avgProductionTime": 2.5,
+        "id": "S-008",
+        "name": "InP 기판-2인치",
+        "stock": 12,
+        "yieldRate": 0.73
+    },
+    {
+        "avgProductionTime": 0.15,
+        "id": "S-009",
+        "name": "스핀온글래스-SOG",
+        "stock": 670,
+        "yieldRate": 0.97
+    },
+    {
+        "avgProductionTime": 1.8,
+        "id": "S-010",
+        "name": "다이아몬드 기판-CVD",
+        "stock": 7,
+        "yieldRate": 0.68
     }
 ]

@@ -107,13 +107,19 @@ char ProductionLineView::show(const std::optional<ProductionTask>& current,
             boxLine(ss.str());
         }
 
-        // 진행바 + 완료 예정 (progress fixed at 50% since no real timer)
+        // 진행바 + 완료 예정 (실제 경과 시간 기반)
         {
-            double remainingMinutes = t.totalTime * 0.5;
+            time_t now = time(nullptr);
+            double totalSec    = t.totalTime * 60.0;
+            double elapsedSec  = (t.startTime > 0) ? static_cast<double>(now - t.startTime) : 0.0;
+            double remainSec   = std::max(0.0, totalSec - elapsedSec);
+            int    pct         = (totalSec > 0)
+                                 ? std::min(100, static_cast<int>(elapsedSec * 100.0 / totalSec))
+                                 : 0;
             std::ostringstream ss;
             ss << padRight("진행", 12)
-               << ConsoleUI::progressBar(50)
-               << "    완료 예정  " << estTime(remainingMinutes);
+               << ConsoleUI::progressBar(pct)
+               << "    완료 예정  " << estTime(remainSec / 60.0);
             boxLine(ss.str());
         }
 
@@ -149,8 +155,16 @@ char ProductionLineView::show(const std::optional<ProductionTask>& current,
                   << Color::RESET << "\n";
         ConsoleUI::printThinLine();
 
-        // 현재 작업 남은 시간 (50% 진행 가정)
-        double cumulativeMin = current.has_value() ? (current->totalTime * 0.5) : 0.0;
+        // 현재 작업의 실제 남은 시간(초) 계산
+        double cumulativeMin = 0.0;
+        if (current.has_value()) {
+            time_t now      = time(nullptr);
+            double totalSec = current->totalTime * 60.0;
+            double elapsed  = (current->startTime > 0)
+                              ? static_cast<double>(now - current->startTime)
+                              : 0.0;
+            cumulativeMin = std::max(0.0, totalSec - elapsed) / 60.0;
+        }
 
         int idx = 1;
         while (!q.empty()) {

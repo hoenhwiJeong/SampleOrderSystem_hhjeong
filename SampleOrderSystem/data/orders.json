@@ -11,6 +11,41 @@
         "id": "ORD-20260612-0002",
         "quantity": 100,
         "sampleId": "S-001",
-        "status": "RESERVED"
+        "status": "REJECTED"
+    },
+    {
+        "customerName": "한미반도체",
+        "id": "ORD-20260612-0003",
+        "quantity": 20,
+        "sampleId": "S-001",
+        "status": "RELEASED"
+    },
+    {
+        "customerName": "한미반도체",
+        "id": "ORD-20260612-0004",
+        "quantity": 90,
+        "sampleId": "S-001",
+        "status": "PRODUCING"
+    },
+    {
+        "customerName": "윌텍",
+        "id": "ORD-20260612-0005",
+        "quantity": 20,
+        "sampleId": "S-005",
+        "status": "PRODUCING"
+    },
+    {
+        "customerName": "웰텍",
+        "id": "ORD-20260612-0006",
+        "quantity": 100,
+        "sampleId": "S-001",
+        "status": "PRODUCING"
+    },
+    {
+        "customerName": "d",
+        "id": "ORD-20260612-0007",
+        "quantity": 30,
+        "sampleId": "S-001",
+        "status": "RELEASED"
     }
 ]

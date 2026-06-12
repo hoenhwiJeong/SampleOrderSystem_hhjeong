@@ -91,7 +91,7 @@ char SampleView::showSampleList(const std::vector<Sample>& page,
 
     for (const auto& s : page) {
         std::ostringstream timeStr, yieldStr;
-        timeStr  << std::fixed << std::setprecision(1) << s.avgProductionTime << " min/ea";
+        timeStr  << std::fixed << std::setprecision(2) << s.avgProductionTime << " min/ea";
         yieldStr << std::fixed << std::setprecision(2) << s.yieldRate;
 
         std::cout << " " << Color::BLUE
@@ -152,7 +152,7 @@ void SampleView::showSearchResult(const std::vector<Sample>& result) {
 
     for (const auto& s : result) {
         std::ostringstream timeStr, yieldStr;
-        timeStr  << std::fixed << std::setprecision(1) << s.avgProductionTime << " min/ea";
+        timeStr  << std::fixed << std::setprecision(2) << s.avgProductionTime << " min/ea";
         yieldStr << std::fixed << std::setprecision(2) << s.yieldRate;
 
         std::cout << " " << Color::BLUE

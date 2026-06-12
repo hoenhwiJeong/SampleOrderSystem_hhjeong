@@ -2,6 +2,7 @@
 #include <string>
 #include <queue>
 #include <optional>
+#include <ctime>
 
 struct ProductionTask {
     std::string orderId;
@@ -12,6 +13,7 @@ struct ProductionTask {
     int         actualProduction;
     double      totalTime;          // min
     double      yieldRate;          // 0.0 ~ 1.0
+    time_t      startTime = 0;      // 생산 시작 시각 (unix timestamp)
 };
 
 class ProductionLineService {

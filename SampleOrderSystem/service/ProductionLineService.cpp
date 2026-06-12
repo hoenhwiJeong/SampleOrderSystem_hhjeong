@@ -1,10 +1,12 @@
 #include "ProductionLineService.h"
 
 void ProductionLineService::enqueue(const ProductionTask& task) {
-    if (!current_.has_value())
+    if (!current_.has_value()) {
         current_ = task;
-    else
+        current_->startTime = time(nullptr); // 즉시 생산 시작
+    } else {
         queue_.push(task);
+    }
 }
 
 std::optional<ProductionTask> ProductionLineService::currentTask() const {
@@ -26,6 +28,7 @@ bool ProductionLineService::hasCurrentTask() const {
 void ProductionLineService::completeCurrentTask() {
     if (!queue_.empty()) {
         current_ = queue_.front();
+        current_->startTime = time(nullptr); // 다음 작업 시작 시각 기록
         queue_.pop();
     } else {
         current_ = std::nullopt;
